@@ -27,32 +27,89 @@
   },
   "topics": {
     "botox_pricing": {
-      "keywords": ["botox", "anti wrinkle", "anti-wrinkle"],
+      "keywords": [
+        "botox",
+        "anti wrinkle",
+        "anti-wrinkle",
+        "wrinkle treatment",
+        "wrinkle injection",
+        "forehead lines",
+        "frown lines"
+      ],
       "answer": "Botox starts from GBP 200 at Bloom Aesthetics Clinic.",
       "confidence": 0.95
     },
     "filler_pricing": {
-      "keywords": ["filler", "fillers", "lip"],
+      "keywords": [
+        "filler",
+        "fillers",
+        "dermal filler",
+        "lip",
+        "lip filler",
+        "cheek filler",
+        "face filler"
+      ],
       "answer": "Fillers start from GBP 250 at Bloom Aesthetics Clinic.",
       "confidence": 0.95
     },
     "consultation_pricing": {
-      "keywords": ["consultation", "consult", "assessment"],
+      "keywords": [
+        "consultation",
+        "consult",
+        "assessment",
+        "skin assessment",
+        "advice appointment",
+        "first appointment"
+      ],
       "answer": "Consultations are free.",
       "confidence": 0.95
     },
     "hours": {
-      "keywords": ["open", "opening", "hours", "time", "when"],
+      "keywords": [
+        "open",
+        "opening",
+        "hours",
+        "time",
+        "when",
+        "closing",
+        "close",
+        "today",
+        "weekend",
+        "saturday",
+        "available time"
+      ],
       "answer": "Bloom Aesthetics Clinic is open Monday to Saturday, 9 am to 7 pm.",
       "confidence": 0.92
     },
     "booking": {
-      "keywords": ["book", "booking", "appointment", "whatsapp", "website"],
+      "keywords": [
+        "book",
+        "booking",
+        "appointment",
+        "whatsapp",
+        "website",
+        "schedule",
+        "reserve",
+        "make appointment",
+        "book appointment",
+        "contact",
+        "get booked",
+        "slot"
+      ],
       "answer": "You can book via WhatsApp or through the website.",
       "confidence": 0.9
     },
     "cancellation": {
-      "keywords": ["cancel", "cancellation", "reschedule"],
+      "keywords": [
+        "cancel",
+        "cancellation",
+        "reschedule",
+        "change appointment",
+        "move appointment",
+        "cancel booking",
+        "change booking",
+        "late cancellation"
+      ],
       "answer": "The clinic requires 24 hours notice for cancellations.",
       "confidence": 0.9
     }

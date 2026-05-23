@@ -21,6 +21,31 @@ SERVICE_AVAILABILITY_TERMS = {
     "treatment",
 }
 
+SERVICE_LIST_TERMS = {
+    "available services",
+    "service list",
+    "services",
+    "treatment list",
+    "treatments",
+    "what can i get",
+    "what do you do",
+    "what do you offer",
+    "what services",
+    "which services",
+}
+
+PRICE_LIST_TERMS = {
+    "charges",
+    "cost",
+    "fees",
+    "how much",
+    "price",
+    "price list",
+    "prices",
+    "pricing",
+    "rates",
+}
+
 
 class SopRepository:
     def __init__(self, path: str | Path) -> None:
@@ -39,11 +64,22 @@ class SopRepository:
                 matches.append((score, key, topic))
 
         if not matches:
+            if self._looks_like_price_list_question(message):
+                return SopAnswer(
+                    answer=f"The clinic SOP lists these prices: {self._service_price_list()}.",
+                    confidence=0.85,
+                )
+
+            if self._looks_like_service_list_question(message):
+                return SopAnswer(
+                    answer=f"The clinic SOP lists these services: {self._service_name_list()}.",
+                    confidence=0.85,
+                )
+
             if self._looks_like_service_availability_question(message):
-                service_names = ", ".join(service["name"] for service in self.business["services"])
                 return SopAnswer(
                     answer=(
-                        f"The clinic SOP lists these services: {service_names}. "
+                        f"The clinic SOP lists these services: {self._service_name_list()}. "
                         "I do not see that specific treatment listed in the SOP."
                     ),
                     confidence=0.75,
@@ -68,6 +104,18 @@ class SopRepository:
 
     def _looks_like_service_availability_question(self, message: str) -> bool:
         return self._keyword_match_score(message, SERVICE_AVAILABILITY_TERMS) >= FUZZY_MATCH_THRESHOLD
+
+    def _looks_like_service_list_question(self, message: str) -> bool:
+        return self._keyword_match_score(message, SERVICE_LIST_TERMS) >= FUZZY_MATCH_THRESHOLD
+
+    def _looks_like_price_list_question(self, message: str) -> bool:
+        return self._keyword_match_score(message, PRICE_LIST_TERMS) >= FUZZY_MATCH_THRESHOLD
+
+    def _service_name_list(self) -> str:
+        return ", ".join(service["name"] for service in self.business["services"])
+
+    def _service_price_list(self) -> str:
+        return "; ".join(f"{service['name']}: {service['price']}" for service in self.business["services"])
 
     def _topic_match_score(self, message: str, keywords: list[str]) -> float:
         return self._keyword_match_score(message, keywords)
