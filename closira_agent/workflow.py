@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import re
 import uuid
+from difflib import SequenceMatcher
 
 from .escalation import EscalationPolicy
 from .llm import GeminiClient
 from .models import ConversationState
 from .sop import SopRepository
 
+
+FUZZY_MATCH_THRESHOLD = 0.82
+SHORT_WORD_LENGTH = 4
 
 LEAD_QUESTIONS = [
     ("business_type", "What type of business are you enquiring for?"),
@@ -99,10 +104,7 @@ class CustomerSupportWorkflow:
         if decision.should_escalate:
             state.escalations.append(decision)
             self.policy.log(state, decision, customer_message)
-            response = (
-                f"{sop_answer.answer} I am handing this to a human agent now. "
-                f"Reason: {', '.join(decision.reasons)}."
-            )
+            response = self._escalation_response(sop_answer.answer, decision.reasons)
         else:
             response = sop_answer.answer
 
@@ -175,19 +177,76 @@ class CustomerSupportWorkflow:
             return "Continue lead qualification by asking the remaining structured questions."
         return "Send booking link or WhatsApp follow-up according to SOP."
 
+    def _escalation_response(self, sop_answer: str, reasons: list[str]) -> str:
+        if "pricing_negotiation" in reasons:
+            return (
+                "I cannot apply discounts or negotiate pricing in chat. "
+                "I am handing this to a human agent now. Reason: pricing_negotiation."
+            )
+        if "medical_question" in reasons:
+            return (
+                "I cannot answer medical questions in chat. "
+                "I am handing this to a human agent now. Reason: medical_question."
+            )
+        if "angry_sentiment_or_complaint" in reasons:
+            return (
+                "I am sorry this has been frustrating. "
+                "I am handing this to a human agent now. Reason: angry_sentiment_or_complaint."
+            )
+        if "explicit_human_request" in reasons:
+            return "I am handing this to a human agent now. Reason: explicit_human_request."
+        return (
+            f"{sop_answer} I am handing this to a human agent now. "
+            f"Reason: {', '.join(reasons)}."
+        )
+
     def _looks_like_lead_intent(self, message: str) -> bool:
-        lowered = message.lower()
-        return any(term in lowered for term in LEAD_INTENT_TERMS) and not any(
-            term in lowered for term in ["price", "cost", "book", "cancel", "open", "hours", "medical", "complain"]
+        lowered = self._normalize(message)
+        return self._contains_keyword(lowered, LEAD_INTENT_TERMS) and not self._contains_keyword(
+            lowered, {"price", "cost", "book", "cancel", "open", "hours", "medical", "complain"}
         )
 
     def _looks_like_acknowledgement(self, message: str) -> bool:
-        lowered = message.lower().strip(" .!,?")
+        lowered = self._normalize(message)
         if not lowered:
             return True
         terms = ACKNOWLEDGEMENT_TERMS | CLOSING_TERMS
-        return lowered in terms or any(lowered.startswith(f"{term} ") for term in terms)
+        return lowered in terms or self._contains_keyword(lowered, terms)
 
     def _looks_like_greeting(self, message: str) -> bool:
-        lowered = message.lower().strip(" .!,?")
-        return lowered in GREETING_TERMS
+        lowered = self._normalize(message)
+        return self._contains_keyword(lowered, GREETING_TERMS)
+
+    def _contains_keyword(self, message: str, keywords: set[str]) -> bool:
+        return max(self._phrase_match_score(message, keyword) for keyword in keywords) >= FUZZY_MATCH_THRESHOLD
+
+    def _phrase_match_score(self, message: str, keyword: str) -> float:
+        keyword = self._normalize(keyword)
+        if not keyword:
+            return 0.0
+        if f" {keyword} " in f" {message} ":
+            return 1.0
+
+        keyword_tokens = keyword.split()
+        message_tokens = message.split()
+        if not keyword_tokens or not message_tokens:
+            return 0.0
+
+        if len(keyword_tokens) == 1:
+            keyword_token = keyword_tokens[0]
+            if len(keyword_token) <= SHORT_WORD_LENGTH:
+                return 0.0
+            return max(SequenceMatcher(None, keyword_token, token).ratio() for token in message_tokens)
+
+        window_size = len(keyword_tokens)
+        if len(message_tokens) < window_size:
+            return SequenceMatcher(None, keyword, message).ratio()
+
+        keyword_phrase = " ".join(keyword_tokens)
+        return max(
+            SequenceMatcher(None, keyword_phrase, " ".join(message_tokens[index : index + window_size])).ratio()
+            for index in range(len(message_tokens) - window_size + 1)
+        )
+
+    def _normalize(self, text: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", text.lower())).strip()

@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import json
+import re
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from .models import ConversationState, EscalationDecision, SopAnswer
 
+
+FUZZY_MATCH_THRESHOLD = 0.82
+SHORT_WORD_LENGTH = 4
 
 ANGRY_TERMS = {
     "angry",
@@ -57,20 +62,20 @@ class EscalationPolicy:
         self.confidence_threshold = confidence_threshold
 
     def evaluate(self, message: str, sop_answer: SopAnswer, state: ConversationState) -> EscalationDecision:
-        lowered = message.lower()
+        lowered = self._normalize(message)
         reasons: list[str] = []
 
         if sop_answer.confidence < self.confidence_threshold:
             reasons.append("low_confidence_or_out_of_scope")
-        if any(term in lowered for term in ANGRY_TERMS):
+        if self._contains_keyword(lowered, ANGRY_TERMS):
             reasons.append("angry_sentiment_or_complaint")
-        if any(term in lowered for term in HUMAN_REQUEST_TERMS) and any(
-            phrase in lowered for phrase in ["speak", "talk", "connect", "transfer", "call"]
+        if self._contains_keyword(lowered, HUMAN_REQUEST_TERMS) and self._contains_keyword(
+            lowered, {"speak", "talk", "connect", "transfer", "call"}
         ):
             reasons.append("explicit_human_request")
-        if any(term in lowered for term in MEDICAL_TERMS):
+        if self._contains_keyword(lowered, MEDICAL_TERMS):
             reasons.append("medical_question")
-        if any(term in lowered for term in NEGOTIATION_TERMS):
+        if self._contains_keyword(lowered, NEGOTIATION_TERMS):
             reasons.append("pricing_negotiation")
         if state.unanswered_count > 2:
             reasons.append("more_than_two_unanswered_questions")
@@ -80,6 +85,40 @@ class EscalationPolicy:
             reasons=sorted(set(reasons)),
             confidence=sop_answer.confidence,
         )
+
+    def _contains_keyword(self, message: str, keywords: set[str]) -> bool:
+        return max(self._phrase_match_score(message, keyword) for keyword in keywords) >= FUZZY_MATCH_THRESHOLD
+
+    def _phrase_match_score(self, message: str, keyword: str) -> float:
+        keyword = self._normalize(keyword)
+        if not keyword:
+            return 0.0
+        if f" {keyword} " in f" {message} ":
+            return 1.0
+
+        keyword_tokens = keyword.split()
+        message_tokens = message.split()
+        if not keyword_tokens or not message_tokens:
+            return 0.0
+
+        if len(keyword_tokens) == 1:
+            keyword_token = keyword_tokens[0]
+            if len(keyword_token) <= SHORT_WORD_LENGTH:
+                return 0.0
+            return max(SequenceMatcher(None, keyword_token, token).ratio() for token in message_tokens)
+
+        window_size = len(keyword_tokens)
+        if len(message_tokens) < window_size:
+            return SequenceMatcher(None, keyword, message).ratio()
+
+        keyword_phrase = " ".join(keyword_tokens)
+        return max(
+            SequenceMatcher(None, keyword_phrase, " ".join(message_tokens[index : index + window_size])).ratio()
+            for index in range(len(message_tokens) - window_size + 1)
+        )
+
+    def _normalize(self, text: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", text.lower())).strip()
 
     def log(self, state: ConversationState, decision: EscalationDecision, message: str) -> None:
         if not decision.should_escalate:
