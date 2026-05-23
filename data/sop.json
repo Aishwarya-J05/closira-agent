@@ -1,0 +1,60 @@
+{
+  "business": {
+    "name": "Bloom Aesthetics Clinic",
+    "hours": "Monday to Saturday, 9 am to 7 pm",
+    "services": [
+      {
+        "name": "Botox",
+        "price": "from GBP 200"
+      },
+      {
+        "name": "Fillers",
+        "price": "from GBP 250"
+      },
+      {
+        "name": "Consultations",
+        "price": "free"
+      }
+    ],
+    "booking": "Customers can book via WhatsApp or the website.",
+    "cancellation_policy": "24 hours notice is required for cancellations.",
+    "escalate_if": [
+      "complaint",
+      "medical question",
+      "pricing negotiation",
+      "more than two unanswered questions"
+    ]
+  },
+  "topics": {
+    "botox_pricing": {
+      "keywords": ["botox", "anti wrinkle", "anti-wrinkle"],
+      "answer": "Botox starts from GBP 200 at Bloom Aesthetics Clinic.",
+      "confidence": 0.95
+    },
+    "filler_pricing": {
+      "keywords": ["filler", "fillers", "lip"],
+      "answer": "Fillers start from GBP 250 at Bloom Aesthetics Clinic.",
+      "confidence": 0.95
+    },
+    "consultation_pricing": {
+      "keywords": ["consultation", "consult", "assessment"],
+      "answer": "Consultations are free.",
+      "confidence": 0.95
+    },
+    "hours": {
+      "keywords": ["open", "opening", "hours", "time", "when"],
+      "answer": "Bloom Aesthetics Clinic is open Monday to Saturday, 9 am to 7 pm.",
+      "confidence": 0.92
+    },
+    "booking": {
+      "keywords": ["book", "booking", "appointment", "whatsapp", "website"],
+      "answer": "You can book via WhatsApp or through the website.",
+      "confidence": 0.9
+    },
+    "cancellation": {
+      "keywords": ["cancel", "cancellation", "reschedule"],
+      "answer": "The clinic requires 24 hours notice for cancellations.",
+      "confidence": 0.9
+    }
+  }
+}
